@@ -94,7 +94,7 @@ namespace AssetStudio
                             signature = "UnityFS\x00";
                             break;
                         case FileType.MhyFile:
-                            signature = "mhy";
+                            signature = "mhy0";
                             break;
                         case FileType.Blb3File:
                             signature = "Blb\x03";
