@@ -5,6 +5,8 @@ namespace AssetStudio
 {
     public class UnityTexEnv
     {
+        private static bool HasMaxMipLevel(SerializedType type) => type.Match("E1EE5B1091AC21B95BAED1351F8FB1C2");
+
         public PPtr<Texture> m_Texture;
         public Vector2 m_Scale;
         public Vector2 m_Offset;
@@ -14,6 +16,10 @@ namespace AssetStudio
             m_Texture = new PPtr<Texture>(reader);
             m_Scale = reader.ReadVector2();
             m_Offset = reader.ReadVector2();
+            if (HasMaxMipLevel(reader.serializedType))
+            {
+                reader.ReadBytes(4);
+            }
             if (reader.Game.Type.IsArknightsEndfield())
             {
                 var m_UVSetIndex = reader.ReadInt32();
