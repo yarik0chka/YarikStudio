@@ -173,7 +173,10 @@ namespace AssetStudio.GUI
                 var subSavePath = Path.Combine(savePath, reader.FileName + "_unpacked");
                 var dummyPath = Path.Combine(reader.FullPath, stream.AbsolutePosition.ToString("X8"));
                 var subReader = new FileReader(dummyPath, stream, true);
-                total += ExtractBundleFile(subReader, subSavePath);
+                if (subReader.FileType == FileType.Blb3File)
+                    total += ExtractBlb3File(subReader, subSavePath);
+                else
+                    total += ExtractBundleFile(subReader, subSavePath);
             } while (stream.Remaining > 0);
             return total;
         }
