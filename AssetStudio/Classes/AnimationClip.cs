@@ -1459,7 +1459,7 @@ namespace AssetStudio
         public bool m_KeepOriginalPositionY;
         public bool m_KeepOriginalPositionXZ;
         public bool m_HeightFromFeet;
-        public static bool HasShortIndexArray(SerializedType type) => type.Match("E708B1872AE48FD688AC012DF4A7A178") || type.Match("055AA41C7639327940F8900103A10356");
+        public static bool HasShortIndexArray(SerializedType type) => type.Match("E708B1872AE48FD688AC012DF4A7A178") || type.Match("055AA41C7639327940F8900103A10356") || type.Match("82E1E738FBDE87C5A8DAE868F0578A4D");
         public ClipMuscleConstant() { }
 
         public ClipMuscleConstant(ObjectReader reader)

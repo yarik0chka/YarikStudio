@@ -25,6 +25,7 @@ namespace AssetStudio
         private bool isNewHeader = false;
 
         public static bool HasPrope(SerializedType type) => type.Match("F622BC5EE0E86D7BDF8C912DD94DCBF5") || type.Match("9255FA54269ADD294011FDA525B5FCAC");
+        public static bool HasStreamingMipmapBias(SerializedType type) => type.Match("3086DE02B7269C6DE7E840C57C244649");
 
         protected Renderer(ObjectReader reader) : base(reader)
         {
@@ -237,6 +238,10 @@ namespace AssetStudio
                 if (reader.Game.Type.IsSR())
                 {
                     var RenderFlag = reader.ReadUInt32();
+                    if (HasStreamingMipmapBias(reader.serializedType))
+                    {
+                        var m_StreamingMipmapBias = reader.ReadSingle();
+                    }
                     reader.AlignStream();
                 }
             }
