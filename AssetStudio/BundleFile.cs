@@ -40,6 +40,8 @@ namespace AssetStudio
         Zstd = 5,
         Lz4Lit4 = 4,
         Lz4Lit5 = 5,
+        OodleHSR = 6,
+        OodleMr0k = 7,
         Oodle = 9,
     }
 
@@ -557,6 +559,41 @@ namespace AssetStudio
                             SevenZipHelper.StreamDecompress(compressedStream, blocksStream, blockInfo.compressedSize, blockInfo.uncompressedSize);
                             break;
                         }
+                    case CompressionType.OodleHSR:
+                    case CompressionType.OodleMr0k:
+                    {
+                        var compressedSize = (int)blockInfo.compressedSize;
+                        var uncompressedSize = (int)blockInfo.uncompressedSize;
+
+                        var compressedBytes = ArrayPool<byte>.Shared.Rent(compressedSize);
+                        var uncompressedBytes = ArrayPool<byte>.Shared.Rent(uncompressedSize);
+
+                        var compressedBytesSpan = compressedBytes.AsSpan(0, compressedSize);
+                        var uncompressedBytesSpan = uncompressedBytes.AsSpan(0, uncompressedSize);
+
+                        try
+                        {
+                            reader.Read(compressedBytesSpan);
+                            if (compressionType == CompressionType.OodleMr0k && Mr0kUtils.IsMr0k(compressedBytes))
+                            {
+                                Logger.Verbose($"Block encrypted with mr0k, decrypting...");
+                                compressedBytesSpan = Mr0kUtils.Decrypt(compressedBytesSpan, (Mr0k)Game);
+                            }
+                            
+                            var numWrite = OodleHelper.Decompress(compressedBytesSpan, uncompressedBytesSpan);
+                            if (numWrite != uncompressedSize)
+                            {
+                                Logger.Warning($"Oodle decompression error, write {numWrite} bytes but expected {uncompressedSize} bytes");
+                            }
+                        }
+                        finally
+                        {
+                            blocksStream.Write(uncompressedBytesSpan);
+                            ArrayPool<byte>.Shared.Return(compressedBytes, true);
+                            ArrayPool<byte>.Shared.Return(uncompressedBytes, true);
+                        }
+                        break;
+                    }
                     case CompressionType.Lz4: //LZ4
                     case CompressionType.Lz4HC: //LZ4HC
                     case CompressionType.Lz4Mr0k when Game.Type.IsMhyGroup(): //Lz4Mr0k
