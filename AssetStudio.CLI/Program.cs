@@ -181,14 +181,19 @@ namespace AssetStudio.CLI
                     var fileList = new List<string>(toReadFile);
                     foreach (var file in fileList)
                     {
-                        assetsManager.LoadFiles(file);
-                        if (assetsManager.assetsFileList.Count > 0)
-                        {
-                            BuildAssetData(classTypeFilter, o.NameFilter, o.ContainerFilter, ref i);
-                            ExportAssets(o.Output.FullName, exportableAssets, o.GroupAssetsType, o.AssetExportType);
+                        try {
+                            assetsManager.LoadFiles(file);
+                            if (assetsManager.assetsFileList.Count > 0)
+                            {
+                                BuildAssetData(classTypeFilter, o.NameFilter, o.ContainerFilter, ref i);
+                                ExportAssets(o.Output.FullName, exportableAssets, o.GroupAssetsType, o.AssetExportType);
+                            }
+                        } catch(Exception e) {
+                            Console.WriteLine(e);
+                        } finally {
+                            exportableAssets.Clear();
+                            assetsManager.Clear();
                         }
-                        exportableAssets.Clear();
-                        assetsManager.Clear();
                     }
                 }
             }
