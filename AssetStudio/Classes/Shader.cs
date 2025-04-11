@@ -382,6 +382,11 @@ namespace AssetStudio
 
             m_NameIndex = reader.ReadInt32();
             m_Index = reader.ReadInt32();
+            if (Shader.HasPlatformInfos(reader.serializedType))
+            {
+                var m_RegisterSpace = reader.ReadInt32();
+                var m_BindCount = reader.ReadInt32();
+            }
             m_SamplerIndex = reader.ReadInt32();
             if (version[0] > 2017 || (version[0] == 2017 && version[1] >= 3)) //2017.3 and up
             {
@@ -404,6 +409,11 @@ namespace AssetStudio
 
             m_NameIndex = reader.ReadInt32();
             m_Index = reader.ReadInt32();
+            if (Shader.HasPlatformInfos(reader.serializedType))
+            {
+                var m_RegisterSpace = reader.ReadInt32();
+                var m_BindCount = reader.ReadInt32();
+            }
             if (version[0] >= 2020) //2020.1 and up
             {
                 m_ArraySize = reader.ReadInt32();
@@ -1062,6 +1072,34 @@ namespace AssetStudio
         PS5NGGC = 24
     };
 
+    public class ShaderPlatformInfo
+    {
+        public uint[] m_SubProgramInfoOffsets;
+        public uint[] m_SubProgramInfoLengths;
+        public byte[] m_SubProgramInfoBlob;
+        public byte[] m_CompressDictionary;
+        public uint[] m_SubProgramCodeOffsets;
+        public uint[] m_SubProgramCodeCompressedLengths;
+        public uint[] m_SubProgramCodeDecompressedLengths;
+        public ulong[] m_CompressMask;
+        public byte[] m_CompressedCodeBlob;
+
+        public ShaderPlatformInfo(ObjectReader reader)
+        {
+            m_SubProgramInfoOffsets = reader.ReadUInt32Array();
+            m_SubProgramInfoLengths = reader.ReadUInt32Array();
+            m_SubProgramInfoBlob = reader.ReadUInt8Array();
+            m_CompressDictionary = reader.ReadUInt8Array();
+            reader.AlignStream();
+            m_SubProgramCodeOffsets = reader.ReadUInt32Array();
+            m_SubProgramCodeCompressedLengths = reader.ReadUInt32Array();
+            m_SubProgramCodeDecompressedLengths = reader.ReadUInt32Array();
+            m_CompressMask = reader.ReadUInt64Array();
+            m_CompressedCodeBlob = reader.ReadUInt8Array();
+            reader.AlignStream();
+        }
+    }
+    
     public class Shader : NamedObject
     {
         public byte[] m_Script;
@@ -1076,8 +1114,10 @@ namespace AssetStudio
         public uint[][] decompressedLengths;
         public byte[] compressedBlob;
         public uint[] stageCounts;
+        public ShaderPlatformInfo[] platformInfos;
 
         public override string Name => m_ParsedForm?.m_Name ?? m_Name;
+        public static bool HasPlatformInfos(SerializedType type) => type.Match("D114ED797139152A2E4A42339CF4AA8E"); // HSR
 
         public Shader(ObjectReader reader) : base(reader)
         {
@@ -1085,44 +1125,58 @@ namespace AssetStudio
             {
                 m_ParsedForm = new SerializedShader(reader);
                 platforms = reader.ReadUInt32Array().Select(x => (ShaderCompilerPlatform)x).ToArray();
-                if (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3)) //2019.3 and up
+                if (HasPlatformInfos(reader.serializedType))
                 {
-                    offsets = reader.ReadUInt32ArrayArray();
-                    compressedLengths = reader.ReadUInt32ArrayArray();
-                    decompressedLengths = reader.ReadUInt32ArrayArray();
+                    int numPlatformInfos = reader.ReadInt32();
+                    platformInfos = new ShaderPlatformInfo[numPlatformInfos];
+                
+                    for (int i = 0; i < numPlatformInfos; i++)
+                    {
+                        platformInfos[i] = new ShaderPlatformInfo(reader);
+                    }
                 }
                 else
                 {
-                    offsets = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
-                    compressedLengths = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
-                    decompressedLengths = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
-                }
-                compressedBlob = reader.ReadUInt8Array();
-                reader.AlignStream();
-                if (reader.Game.Type.IsGISubGroup())
-                {
-                    if (BinaryPrimitives.ReadInt32LittleEndian(compressedBlob) == -1)
+                    if (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3)) //2019.3 and up
                     {
-                        compressedBlob = reader.ReadUInt8Array(); //blobDataBlocks
+                        offsets = reader.ReadUInt32ArrayArray();
+                        compressedLengths = reader.ReadUInt32ArrayArray();
+                        decompressedLengths = reader.ReadUInt32ArrayArray();
+                    }
+                    else
+                    {
+                        offsets = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
+                        compressedLengths = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
+                        decompressedLengths = reader.ReadUInt32Array().Select(x => new[] { x }).ToArray();
+                    }
+
+                    compressedBlob = reader.ReadUInt8Array();
+                    reader.AlignStream();
+                    if (reader.Game.Type.IsGISubGroup())
+                    {
+                        if (BinaryPrimitives.ReadInt32LittleEndian(compressedBlob) == -1)
+                        {
+                            compressedBlob = reader.ReadUInt8Array(); //blobDataBlocks
+                            reader.AlignStream();
+                        }
+                    }
+
+                    if (reader.Game.Type.IsLoveAndDeepspace())
+                    {
+                        var codeOffsets = reader.ReadUInt32ArrayArray();
+                        var codeCompressedLengths = reader.ReadUInt32ArrayArray();
+                        var codeDecompressedLengths = reader.ReadUInt32ArrayArray();
+                        var codeCompressedBlob = reader.ReadUInt8Array();
                         reader.AlignStream();
                     }
-                }
 
-                if (reader.Game.Type.IsLoveAndDeepspace())
-                {
-                    var codeOffsets = reader.ReadUInt32ArrayArray();
-                    var codeCompressedLengths = reader.ReadUInt32ArrayArray();
-                    var codeDecompressedLengths = reader.ReadUInt32ArrayArray();
-                    var codeCompressedBlob = reader.ReadUInt8Array();
-                    reader.AlignStream();
-                }
-
-                if ((version[0] == 2021 && version[1] > 3) ||
-                    version[0] == 2021 && version[1] == 3 && version[2] >= 12 || //2021.3.12f1 and up
-                    (version[0] == 2022 && version[1] > 1) ||
-                    version[0] == 2022 && version[1] == 1 && version[2] >= 21) //2022.1.21f1 and up
-                {
-                    stageCounts = reader.ReadUInt32Array();
+                    if ((version[0] == 2021 && version[1] > 3) ||
+                        version[0] == 2021 && version[1] == 3 && version[2] >= 12 || //2021.3.12f1 and up
+                        (version[0] == 2022 && version[1] > 1) ||
+                        version[0] == 2022 && version[1] == 1 && version[2] >= 21) //2022.1.21f1 and up
+                    {
+                        stageCounts = reader.ReadUInt32Array();
+                    }
                 }
 
                 var m_DependenciesCount = reader.ReadInt32();

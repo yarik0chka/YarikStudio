@@ -17,6 +17,9 @@ namespace AssetStudio
     {
         public static string Convert(this Shader shader)
         {
+            if (shader.platformInfos != null)
+                return null;
+            
             if (shader.m_SubProgramBlob != null) //5.3 - 5.4
             {
                 var decompressedBytes = new byte[shader.decompressedSize];
