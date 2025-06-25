@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFrameworks>net7.0-windows;net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net7.0-windows;net8.0-windows;net9.0-windows</TargetFrameworks>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ApplicationIcon>Resources\as.ico</ApplicationIcon>
 		<Version>1.36.00</Version>
